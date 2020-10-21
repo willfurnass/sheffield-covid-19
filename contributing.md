@@ -26,7 +26,7 @@ like Sphinx encourages.
 
 ## [Typehints](https://docs.python.org/3/library/typing.html)
 
-* Do not use typehints.
+* Please use typehints.
 
 ## Tests
 

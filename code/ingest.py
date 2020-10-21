@@ -15,8 +15,11 @@ The flow is approximately:
 - store, data as CSV and/or JSON
 """
 
+from typing import Iterable, List, Sequence, Union
+
 # https://docs.python.org/3/library/xml.etree.elementtree.html
 import xml.etree
+import xml.etree.ElementTree
 
 # https://docs.python.org/3/library/argparse.html
 import argparse
@@ -38,6 +41,7 @@ import requests
 
 # https://www.tutorialspoint.com/matplotlib/matplotlib_bar_plot.htm
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 
 from datetime import date
@@ -45,7 +49,7 @@ from datetime import date
 URL = "https://www.sheffield.ac.uk/autumn-term-2020/covid-19-statistics/"
 
 
-def main():
+def main() -> None:
     # Argument Parsing
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -87,7 +91,7 @@ def main():
             f.write(json.dumps(data))
 
 
-def transform(rows):
+def transform(rows: Iterable[Sequence[str]]) -> List[List[Union[str, int]]]:
     """
     The input is a list of rows, each row is a list of strings.
     The return value is a list of rows, each row is a list of
@@ -102,14 +106,14 @@ def transform(rows):
     result = []
     for row in rows:
         iso_date = str(dateutil.parser.parse(row[0]).date())
-        out = [iso_date]
-        out.extend(int(x) for x in row[1:])
+        out: List[Union[str, int]] = [iso_date]
+        out.extend([int(x) for x in row[1:]])
         result.append(out)
 
     return sorted(result)
 
 
-def extract(dom):
+def extract(dom: xml.etree.ElementTree.Element) -> List[List[str]]:
     """
     Extract all the rows that plausibly contain data,
     and return them as a list of list of strings.
@@ -119,12 +123,12 @@ def extract(dom):
 
     result = []
     for row in rows:
-        result.append([el.text for el in row])
+        result.append([el.text for el in row if el.text])
 
     return result
 
 
-def fetch():
+def fetch() -> xml.etree.ElementTree.Element:
     """
     Fetch the web page and return it as a parsed DOM object.
     """
@@ -135,7 +139,7 @@ def fetch():
     return dom
 
 
-def validate(table):
+def validate(table: Iterable[Sequence[str]]) -> Sequence[Sequence[str]]:
     """
     `table` should be a table of strings in list of list format.
     Each row is checked to see if it is of the expected format.
@@ -152,16 +156,19 @@ def validate(table):
             assert "New student" in row[2]
             continue
 
-        row = [cell_value[:-1] if cell_value.endswith('*') else cell_value for cell_value in row]
+        row = [
+            cell_value[:-1] if cell_value.endswith("*") else cell_value
+            for cell_value in row
+        ]
         validated.append(row)
 
     return validated
 
 
-def create_visualisations(data):
+def create_visualisations(data: Iterable[Sequence[Union[int, str]]]) -> None:
     date_column = 0
     staff_column = 1
-    studentColumn = 2
+    student_column = 2
 
     dates = []
     staff_values = []
@@ -170,13 +177,13 @@ def create_visualisations(data):
     for row in data:
         dates.append(row[date_column])
         staff_values.append(row[staff_column])
-        student_values.append(row[studentColumn])
+        student_values.append(row[student_column])
 
     # Similar implementation to https://matplotlib.org/3.1.1/gallery/lines_bars_and_markers/barchart.html
     locations = np.arange(len(dates))
     bar_width = 0.35
 
-    figure, axes = plt.subplots()
+    _, axes = plt.subplots()
 
     staff_bars = axes.bar(
         locations - bar_width / 2, staff_values, bar_width, label="Staff"
@@ -205,7 +212,9 @@ def create_visualisations(data):
     plt.savefig(filename, dpi=600)
 
 
-def add_column_labels(bars, axes):
+def add_column_labels(
+    bars: matplotlib.container.BarContainer, axes: matplotlib.axes.Axes
+) -> None:
     for bar in bars:
         height = bar.get_height()
         axes.annotate(
